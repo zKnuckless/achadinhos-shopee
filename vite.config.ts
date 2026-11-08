@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       tsconfigPaths: true,
       alias: [
         {
-          find: /^@higgsfield-ai\\/icons(\\/.*)?$/,
+          find: /^@higgsfield-ai\/icons(\/.*)?$/,
           replacement: QUANTA_ICONS_SHIM,
         },
       ],
