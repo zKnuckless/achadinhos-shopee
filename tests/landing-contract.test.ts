@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { landingContentSchema } from "@higgsfield/app-landing";
 import { landingContent } from "../src/landing-content";
 
-describe("scroll-scrub website landing contract", () => {
+describe("Achadinhos Shopee storefront contract", () => {
   test("uses a safe full-app route preview", () => {
     expect(() => landingContentSchema.parse(landingContent)).not.toThrow();
     expect(landingContent.preview).toMatchObject({
@@ -24,9 +24,16 @@ describe("scroll-scrub website landing contract", () => {
     const landingRoute = readFileSync(new URL("../src/routes/index.tsx", import.meta.url), "utf8");
     const appRoute = readFileSync(new URL("../src/routes/app.tsx", import.meta.url), "utf8");
 
-    // scroll-scrub's home IS the site: "/" renders the journey instead of the
-    // stock LandingPage. Everything else about the split is unchanged.
-    expect(landingRoute).toContain("ScrollScrub");
+    // The root route is the public storefront, with catalog, search,
+    // category filters, affiliate buttons and a separate app route.
+    expect(landingRoute).toContain('createFileRoute("/")');
+    expect(landingRoute).toContain("const starterProducts");
+    expect(landingRoute).toContain("const categories");
+    expect(landingRoute).toContain("localStorage");
+    expect(landingRoute).toContain("Buscar um produto");
+    expect(landingRoute).toContain("Comprar na Shopee");
+    expect(landingRoute).toContain("Você descobre.");
+    expect(landingRoute).toContain("A Shopee entrega.");
     expect(appRoute).toContain('createFileRoute("/app")');
     expect(appRoute).toContain("previewMode");
   });
