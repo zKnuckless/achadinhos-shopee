@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: async ({ request }: { request: Request }) => {
         const origin = new URL(request.url).origin;
         const today = new Date().toISOString().split("T")[0];
         const xml = [
@@ -26,4 +26,4 @@ export const Route = createFileRoute("/sitemap.xml")({
       },
     },
   },
-});
+} as any);
