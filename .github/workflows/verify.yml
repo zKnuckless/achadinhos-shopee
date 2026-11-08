@@ -8,6 +8,9 @@ concurrency:
   group: achadinhos-verify-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   verify:
     runs-on: ubuntu-latest
