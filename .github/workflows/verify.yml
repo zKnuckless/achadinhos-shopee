@@ -15,10 +15,6 @@ jobs:
         run: bun --version
       - name: Refresh Bun lockfile
         run: bun install
-      - name: Build for Vercel
-        run: bun run build
-      - name: Run project tests
-        run: bun run test
       - name: Commit refreshed lockfile
         run: |
           if ! git diff --quiet -- bun.lock; then
@@ -28,3 +24,7 @@ jobs:
             git commit -m "Refresh Bun lockfile after security update"
             git push
           fi
+      - name: Build for Vercel
+        run: bun run build
+      - name: Run project tests
+        run: bun run test
