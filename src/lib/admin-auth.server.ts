@@ -15,12 +15,15 @@ const MAX_FAILED_ATTEMPTS = 5;
 const failedAttempts = new Map<string, { count: number; resetAt: number }>();
 
 function readConfig() {
+  const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
   const sessionSecret = process.env.ADMIN_SESSION_SECRET;
   return {
+    username,
     password,
     sessionSecret,
     configured:
+      typeof username === "string" && username.length >= 1 &&
       typeof password === "string" &&
       password.length >= 12 &&
       typeof sessionSecret === "string" &&
@@ -123,17 +126,19 @@ export function getAdminStatusOnServer() {
   };
 }
 
-export function loginAdminOnServer(candidate: string) {
+export function loginAdminOnServer(candidateUsername: string, candidatePassword: string) {
   setNoStore();
-  const { password, sessionSecret, configured } = readConfig();
+  const { username, password, sessionSecret, configured } = readConfig();
 
-  if (!configured || !password || !sessionSecret) {
+  if (!configured || !username || !password || !sessionSecret) {
     return { ok: false as const, reason: "not-configured" as const };
   }
   if (isRateLimited()) {
     return { ok: false as const, reason: "rate-limited" as const };
   }
-  if (!safePasswordCompare(candidate, password)) {
+  const validUsername = safePasswordCompare(candidateUsername, username);
+  const validPassword = safePasswordCompare(candidatePassword, password);
+  if (!validUsername || !validPassword) {
     recordFailedAttempt();
     return { ok: false as const, reason: "invalid-credentials" as const };
   }
