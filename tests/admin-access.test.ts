@@ -20,6 +20,8 @@ describe("private storefront management", () => {
     expect(route).toContain("getAdminStatus");
     expect(route).toContain("loginAdmin");
     expect(clientBoundary).toContain('import("./admin-auth.server")');
+    expect(clientBoundary).toContain("username: z.string()");
+    expect(serverAuth).toContain("ADMIN_USERNAME");
     expect(serverAuth).toContain("ADMIN_PASSWORD");
     expect(serverAuth).toContain("ADMIN_SESSION_SECRET");
     expect(serverAuth).toContain("httpOnly: true");
