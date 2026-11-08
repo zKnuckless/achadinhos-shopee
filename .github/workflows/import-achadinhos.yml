@@ -1,0 +1,159 @@
+name: Import Achadinhos source
+on:
+  push:
+    branches: [main]
+
+jobs:
+  import-and-verify:
+    if: github.event.head_commit.message == 'Import Achadinhos application source'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Import source archive and adapt runtime
+        env:
+          SOURCE_ARCHIVE: https://d2ol7oe51mr4n9.cloudfront.net/user_38YI3gA0EjxJJSgdWOkmaqx79cE/1d520960-155a-419a-abcc-d3e0bd5aea3f.gz
+        run: |
+          set -euo pipefail
+          curl -fL "$SOURCE_ARCHIVE" -o /tmp/achadinhos-source.tar
+          mkdir -p /tmp/achadinhos-import
+          if tar -tzf /tmp/achadinhos-source.tar >/dev/null 2>&1; then
+            tar -xzf /tmp/achadinhos-source.tar -C /tmp/achadinhos-import
+          else
+            tar -xf /tmp/achadinhos-source.tar -C /tmp/achadinhos-import
+          fi
+          test -f /tmp/achadinhos-import/app/package.json
+          find /tmp/achadinhos-import/app -depth \( -name node_modules -o -name dist -o -name .git \) -exec rm -rf {} +
+          cp -a /tmp/achadinhos-import/app/. .
+
+          cat > vite.config.ts <<'VITE'
+          import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+          import { nitro } from "nitro/vite";
+          import tailwindcss from "@tailwindcss/vite";
+          import react from "@vitejs/plugin-react";
+          import {
+            higgsfieldDesignInspectorVitePlugin,
+            higgsfieldDesignSourceBabelPlugin,
+          } from "./src/module/design-inspector/vite";
+          import svgr from "vite-plugin-svgr";
+          import { defineConfig } from "vite";
+          import { fileURLToPath } from "node:url";
+
+          const QUANTA_ICONS_SHIM = fileURLToPath(
+            new URL("./src/lib/quanta-icons.ts", import.meta.url),
+          );
+
+          export default defineConfig(({ mode }) => {
+            const designInspectorEnabled =
+              process.env.HF_DESIGN_INSPECTOR === "1" || mode === "design";
+
+            return {
+              server: {
+                watch: { usePolling: true, interval: 150 },
+              },
+              resolve: {
+                tsconfigPaths: true,
+                alias: [
+                  {
+                    find: /^@higgsfield-ai\\/icons(\\/.*)?$/,
+                    replacement: QUANTA_ICONS_SHIM,
+                  },
+                ],
+              },
+              plugins: [
+                tanstackStart(),
+                nitro(),
+                svgr({
+                  svgrOptions: {
+                    icon: true,
+                    svgProps: { fill: "currentColor" },
+                    svgoConfig: {
+                      plugins: [
+                        {
+                          name: "preset-default",
+                          params: { overrides: { removeViewBox: false } },
+                        },
+                      ],
+                    },
+                  },
+                }),
+                higgsfieldDesignInspectorVitePlugin(designInspectorEnabled),
+                react({
+                  babel: {
+                    plugins: designInspectorEnabled
+                      ? [higgsfieldDesignSourceBabelPlugin]
+                      : [],
+                  },
+                }),
+                tailwindcss(),
+              ],
+            };
+          });
+          VITE
+
+          cat > src/lib/bindings.server.ts <<'BINDINGS'
+          import { env as runtimeEnv } from "node:process";
+
+          type AppEnv = {
+            DB?: {
+              prepare: (sql: string) => {
+                first: <T>() => Promise<T | null>;
+              };
+            };
+            HF_ENV?: string;
+            APP_SLUG?: string;
+          };
+
+          // The storefront does not require Cloudflare bindings. Keep the
+          // optional example binding empty and expose Vercel runtime metadata.
+          export function bindings(): AppEnv {
+            return {
+              HF_ENV: runtimeEnv.VERCEL_ENV ?? "production",
+              APP_SLUG: runtimeEnv.APP_SLUG ?? "achadinhos-shopee",
+            };
+          }
+          BINDINGS
+
+          rm -f src/server.ts src/cloudflare-workers.d.ts wrangler.jsonc
+
+          cat > vercel.json <<'VERCEL'
+          {
+            "$schema": "https://openapi.vercel.sh/vercel.json",
+            "framework": "tanstack-start",
+            "headers": [
+              {
+                "source": "/(.*)",
+                "headers": [
+                  { "key": "X-Content-Type-Options", "value": "nosniff" },
+                  { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+                  { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+                  { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+                  { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https:; base-uri 'self'; form-action 'self'" }
+                ]
+              }
+            ]
+          }
+          VERCEL
+
+          printf '\n.vercel\n' >> .gitignore
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import source and adapt TanStack Start for Vercel"
+          git push
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build for Vercel
+        run: bun run build
+
+      - name: Run project tests
+        run: bun run test
