@@ -46,6 +46,7 @@ function AdminRoute() {
 
 function AdminLogin({ configured }: { configured: boolean }) {
   const router = useRouter();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,8 +56,9 @@ function AdminLogin({ configured }: { configured: boolean }) {
     setMessage("");
     setBusy(true);
     try {
-      const result = await loginAdmin({ data: { password } });
+      const result = await loginAdmin({ data: { username, password } });
       if (result.ok) {
+        setUsername("");
         setPassword("");
         await router.invalidate();
         return;
@@ -90,6 +92,18 @@ function AdminLogin({ configured }: { configured: boolean }) {
           </div>
         ) : (
           <form className="admin-login-form" onSubmit={submit}>
+            <label htmlFor="admin-username">Login</label>
+            <input
+              id="admin-username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Seu usuário"
+              maxLength={100}
+              required
+              autoFocus
+            />
             <label htmlFor="admin-password">Senha de administrador</label>
             <input
               id="admin-password"
@@ -104,7 +118,7 @@ function AdminLogin({ configured }: { configured: boolean }) {
               autoFocus
             />
             {message && <p className="admin-login-error" role="alert">{message}</p>}
-            <button className="primary-cta form-submit" type="submit" disabled={busy || password.length < 12}>
+            <button className="primary-cta form-submit" type="submit" disabled={busy || !username.trim() || password.length < 12}>
               {busy ? "Verificando..." : "Entrar na gestão"}
             </button>
           </form>
