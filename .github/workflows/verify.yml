@@ -4,6 +4,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: achadinhos-verify-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -22,7 +26,9 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add bun.lock
             git commit -m "Refresh Bun lockfile after security update"
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
       - name: Build for Vercel
         run: bun run build
