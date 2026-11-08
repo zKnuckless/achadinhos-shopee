@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/robots.txt")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: async ({ request }: { request: Request }) => {
         const origin = new URL(request.url).origin;
         const body = ["User-agent: *", "Allow: /", "", `Sitemap: ${origin}/sitemap.xml`].join("\n");
         return new Response(body, {
@@ -15,4 +15,4 @@ export const Route = createFileRoute("/robots.txt")({
       },
     },
   },
-});
+} as any);
