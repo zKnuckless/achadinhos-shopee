@@ -9,10 +9,10 @@ export const getAdminStatus = createServerFn({ method: "GET" }).handler(async ()
 });
 
 export const loginAdmin = createServerFn({ method: "POST" })
-  .validator(z.object({ password: z.string().min(1).max(256) }))
+  .validator(z.object({ username: z.string().min(1).max(100), password: z.string().min(1).max(256) }))
   .handler(async ({ data }) => {
     const { loginAdminOnServer } = await import("./admin-auth.server");
-    return loginAdminOnServer(data.password);
+    return loginAdminOnServer(data.username, data.password);
   });
 
 export const logoutAdmin = createServerFn({ method: "POST" }).handler(async () => {
